@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GridLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/gridLayoutLikedPhotos"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="3"
+    android:padding="4dp"
+    android:clipToPadding="false"
+    android:scrollbars="vertical"
+    android:scrollbarStyle="outsideOverlay"
+    android:horizontalSpacing="4dp"
+    android:verticalSpacing="4dp"
+    android:scrollbarThumbVertical="@android:color/darker_gray"
+    android:scrollbarTrackVertical="@android:color/transparent">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewLikedPhotos"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:layout_margin="4dp"
+        android:clipToPadding="false"
+        android:horizontalSpacing="4dp"
+        android:numColumns="3"
+
+        android:padding="4dp"
+        android:scrollbarStyle="outsideOverlay"
+        android:scrollbarThumbVertical="@android:color/darker_gray"
+        android:scrollbarTrackVertical="@android:color/transparent"
+        android:scrollbars="vertical"
+
+        android:stretchMode="columnWidth"
+        android:verticalSpacing="4dp" />
+</GridLayout>

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "261910064611",
+    "firebase_url": "https://relive-24cd4-default-rtdb.firebaseio.com",
+    "project_id": "relive-24cd4",
+    "storage_bucket": "relive-24cd4.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:261910064611:android:1e48b520c660501a6c04d6",
+        "android_client_info": {
+          "package_name": "com.example.relive"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "261910064611-6pnir2up0u88369m7ma5nkgblk6tonrp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.relive",
+            "certificate_hash": "5e733656195a69559ec473e1b34d1c573ad97acb"
+          }
+        },
+        {
+          "client_id": "261910064611-tpnqqhar971nq60hgbbrooivlbb6tesi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsq5yqnPPdJje0aIRTRt4rzDQuk5Qn4yI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "261910064611-tpnqqhar971nq60hgbbrooivlbb6tesi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
