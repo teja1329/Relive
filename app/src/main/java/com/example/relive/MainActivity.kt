@@ -33,7 +33,12 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.storage.FirebaseStorage
 
 import java.io.File
@@ -93,8 +98,9 @@ class MainActivity : AppCompatActivity() {
 
         FirebaseApp.initializeApp(this)
         sessionManager = SessionManager(this)
+        val currentUser = FirebaseAuth.getInstance().currentUser
 
-        if (!sessionManager.isLoggedIn()) {
+        if (currentUser == null || !sessionManager.isLoggedIn()) {
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
             finish()
@@ -124,17 +130,7 @@ class MainActivity : AppCompatActivity() {
                 initialImageHeight = imageView.height
             }
         })
-//        logoutbutton = findViewById(R.id.logoutbutton)
-//        logoutbutton.setOnClickListener{
-//            signOut()
-//        }
-//
-//        heartLogo = findViewById(R.id.heartLogo)
-//        heartLogo.setOnClickListener {
-//            Toast.makeText(this, "showing Likedphotos", Toast.LENGTH_SHORT).show()
-//            val intent = Intent(this, LikedPhotosActivity::class.java)
-//            startActivity(intent)
-//        }
+
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -248,6 +244,7 @@ class MainActivity : AppCompatActivity() {
                     startActivity(Intent(this, LikedPhotosActivity::class.java))
                     true
                 }
+
                 R.id.menu_item_update_password -> {
                     // Handle Update Password click
                     // Start the UpdatePasswordActivity
@@ -260,6 +257,12 @@ class MainActivity : AppCompatActivity() {
                     // Implement logout logic here
                     true
                 }
+                R.id.menu_item_delete_account -> {
+                    startActivity(Intent(this, DeleteAccountActivity::class.java))
+
+                    true
+                }
+
                 else -> false
             }
         }
@@ -274,11 +277,31 @@ class MainActivity : AppCompatActivity() {
         // Update the session manager to mark the user as logged out
         sessionManager.logout()
 
+        // Clear the app's cache directory
+        clearAppCacheDirectory(cacheDir)
+
         // Redirect to the LoginActivity
         val intent = Intent(this, LoginActivity::class.java)
         startActivity(intent)
         finish()
     }
+
+    private fun clearAppCacheDirectory(directory: File) {
+        try {
+            directory.listFiles()?.forEach { file ->
+                if (file.isDirectory) {
+                    clearAppCacheDirectory(file)
+                } else {
+                    file.delete()
+                }
+            }
+        } catch (e: Exception) {
+            // Handle exceptions if necessary
+            Log.e("ClearCacheError", "Error clearing cache: ${e.message}")
+        }
+    }
+
+
 
 
     private fun initializeLikedPhotosSet() {
@@ -291,14 +314,30 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d("CacheClearing", "onDestroy called")
 
-        // Run Glide.clearDiskCache() on a background thread
-        Thread {
-            Glide.get(this).clearDiskCache()
-        }.start()
+        // Clear the app's cache directory
+        clearAppCache()
+    }
 
-        Glide.get(this).clearMemory()
+    private fun clearAppCache() {
+        try {
+            val cacheDir = cacheDir
+            if (cacheDir != null) {
+                val cacheDirPath = cacheDir.path
+                val dir = File(cacheDirPath)
+                if (dir.exists() && dir.isDirectory) {
+                    val children = dir.list()
+                    if (children != null) {
+                        for (child in children) {
+                            File(dir, child).delete()
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Handle exceptions if necessary
+            Log.e("ClearCacheError", "Error clearing cache: ${e.message}")
+        }
     }
 
 
@@ -428,37 +467,56 @@ class MainActivity : AppCompatActivity() {
             return true
         }
     }
-
+    private val likedPhotoUrls: MutableSet<String> = mutableSetOf() // Maintain a set of liked photo URLs in memory
     private fun saveLikedPhoto(imagePath: String) {
         val storageRef = FirebaseStorage.getInstance().reference
         val databaseRef = FirebaseDatabase.getInstance().reference
         val user = FirebaseAuth.getInstance().currentUser
 
         user?.let { currentUser ->
-            // Generate a unique filename for the image in Firebase Storage
-            val filename = UUID.randomUUID().toString()
-
+            // Generate a unique key for the liked photo based on the image URL
             val imageFile = File(imagePath)
             val imageUri: Uri = Uri.fromFile(imageFile)
+            val imageUrl = imageUri.toString()
+            val likedPhotoKey = imageUrl.hashCode().toString()
 
             // Upload the image to Firebase Storage
             val likedPhotosFolder = "users/${currentUser.uid}/liked_images"
-            val imageStorageRef = storageRef.child("$likedPhotosFolder/$filename")
+            val imageStorageRef = storageRef.child("$likedPhotosFolder/$likedPhotoKey")
             val uploadTask = imageStorageRef.putFile(imageUri)
 
             uploadTask.addOnSuccessListener { _ ->
-                // Image upload success, get the download URL
-                imageStorageRef.downloadUrl.addOnSuccessListener { downloadUri ->
-                    // Save the download URL to Firebase Realtime Database
-                    val likedPhoto = LikedPhoto(downloadUri.toString())
+                // Check if the key already exists in the user's liked photos
+                val userPhotosRef = databaseRef.child("user_photos").child(currentUser.uid)
+                userPhotosRef.child(likedPhotoKey).addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        if (snapshot.exists()) {
+                            // The photo is already saved, show a message or handle as needed
+                            Toast.makeText(
+                                this@MainActivity,
+                                "This photo is already in Liked Photos",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            // The photo is not a duplicate, save it to Firebase Realtime Database
+                            val likedPhoto = LikedPhoto(imageUrl)
+                            userPhotosRef.child(likedPhotoKey).setValue(likedPhoto)
 
-                    // Push the liked photo to the user's node in the database
-                    val userPhotosRef = databaseRef.child("user_photos").child(currentUser.uid).push()
-                    userPhotosRef.setValue(likedPhoto)
+                            // Show a toast message
+                            Toast.makeText(this@MainActivity, "Added to Liked Photos", Toast.LENGTH_SHORT).show()
+                        }
+                    }
 
-                    // Show a toast message
-                    Toast.makeText(this@MainActivity, "Added to Liked Photos", Toast.LENGTH_SHORT).show()
-                }
+                    override fun onCancelled(error: DatabaseError) {
+                        // Handle database query cancellation or errors
+                        Log.e("FirebaseQuery", "Failed to query database: ${error.message}", error.toException())
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Failed to query database: ${error.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                })
             }.addOnFailureListener { exception ->
                 // Handle any errors that occurred during the upload
                 Log.e("FirebaseUpload", "Failed to upload image: ${exception.message}", exception)
@@ -470,9 +528,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-
-
 
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {

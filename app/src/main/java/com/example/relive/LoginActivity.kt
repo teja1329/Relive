@@ -114,50 +114,82 @@ class LoginActivity : AppCompatActivity() {
         createAccountButton.setOnClickListener {
             val username = usernameEditText.text.toString()
             val password = passwordEditText.text.toString()
+            if (username.isEmpty() || password.isEmpty()) {
+                // Check if either email or password is empty
+                Toast.makeText(
+                    this, "Please enter both email and password.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            // Implement your custom password strength checks here
+            if (!isStrongPassword(password)) {
+                // Password is not strong enough, display an error message
+                Toast.makeText(this, "Password should be at least 8 characters long and contain a combination of letters, numbers, and special characters.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-            // Check if the account already exists
-            firebaseAuth.fetchSignInMethodsForEmail(username)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val signInMethods = task.result?.signInMethods
-                        if (signInMethods != null && signInMethods.isNotEmpty()) {
-                            // Account with this email already exists, display a toast message
+            else {
+                // Check if the account already exists
+                firebaseAuth.fetchSignInMethodsForEmail(username)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val signInMethods = task.result?.signInMethods
+                            if (signInMethods != null && signInMethods.isNotEmpty()) {
+                                // Account with this email already exists, display a toast message
+                                Toast.makeText(
+                                    this, "Account with this email already exists.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                // Account does not exist, create an account with Firebase Authentication
+                                firebaseAuth.createUserWithEmailAndPassword(username, password)
+                                    .addOnCompleteListener(this) { createUserTask ->
+                                        if (createUserTask.isSuccessful) {
+                                            // Account creation successful, display a toast message
+                                            Toast.makeText(
+                                                this,
+                                                "Account created successfully. You can now sign in.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        } else {
+                                            // Account creation failed, display a toast message
+                                            Toast.makeText(
+                                                this,
+                                                "Account creation failed. Please try again later.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                            }
+                        } else {
+                            // Error occurred while checking for account existence
                             Toast.makeText(
-                                this, "Account with this email already exists.",
+                                this, "Error checking account existence. Please try again later.",
                                 Toast.LENGTH_SHORT
                             ).show()
-                        } else {
-                            // Account does not exist, create an account with Firebase Authentication
-                            firebaseAuth.createUserWithEmailAndPassword(username, password)
-                                .addOnCompleteListener(this) { createUserTask ->
-                                    if (createUserTask.isSuccessful) {
-                                        // Account creation successful, display a toast message
-                                        Toast.makeText(
-                                            this,
-                                            "Account created successfully. You can now sign in.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else {
-                                        // Account creation failed, display a toast message
-                                        Toast.makeText(
-                                            this,
-                                            "Account creation failed. Please try again later.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
                         }
-                    } else {
-                        // Error occurred while checking for account existence
-                        Toast.makeText(
-                            this, "Error checking account existence. Please try again later.",
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
-                }
+            }
         }
 
     }
+
+    private fun isStrongPassword(password: String): Boolean {
+        // Check if the password is at least 8 characters long
+        if (password.length < 8) {
+            return false
+        }
+
+        // Check if the password contains at least one letter, one number, and one special character
+        val letterPattern = Regex("[a-zA-Z]")
+        val digitPattern = Regex("[0-9]")
+        val specialCharPattern = Regex("[!@#\$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>?~]")
+
+        return letterPattern.containsMatchIn(password) &&
+                digitPattern.containsMatchIn(password) &&
+                specialCharPattern.containsMatchIn(password)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 

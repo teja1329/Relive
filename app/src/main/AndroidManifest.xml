@@ -48,6 +48,10 @@
             android:name=".LikedPhotoActivity"
             android:exported="false">
         </activity>
+        <activity
+            android:name=".DeleteAccountActivity"
+            android:exported="false">
+        </activity>
 
 
         <provider

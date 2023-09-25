@@ -10,6 +10,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import java.io.File
 
 class LikedPhotosActivity : AppCompatActivity() {
 
@@ -53,6 +54,33 @@ class LikedPhotosActivity : AppCompatActivity() {
 
         // Fetch and display liked photos from Firebase Storage for the current user
         fetchLikedPhotosForCurrentUser()
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // Clear the app's cache directory
+        clearAppCache()
+    }
+
+    private fun clearAppCache() {
+        try {
+            val cacheDir = cacheDir
+            if (cacheDir != null) {
+                val cacheDirPath = cacheDir.path
+                val dir = File(cacheDirPath)
+                if (dir.exists() && dir.isDirectory) {
+                    val children = dir.list()
+                    if (children != null) {
+                        for (child in children) {
+                            File(dir, child).delete()
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Handle exceptions if necessary
+            Log.e("ClearCacheError", "Error clearing cache: ${e.message}")
+        }
     }
 
     private fun fetchLikedPhotosForCurrentUser() {
